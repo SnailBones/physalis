@@ -2,9 +2,12 @@
 // A small collection of my favorite shader functions,
 // corn, rice, potatoes, and blur functions.
 
+// TODO: keep track of different blurs for different functions
+
 exports.init = (den, extend = true) => {
 // var Staples = (() => {	
-	const ST = {} 
+	const ST = {}
+	const tempTex = den.f4tex([1, 1]);
 	// var den
 
 	class StaplesError extends Error {
@@ -18,25 +21,13 @@ exports.init = (den, extend = true) => {
 		}
 	}
 
-	ST.clamp = (a,b,c) => Math.min(c,Math.max(b,a))
-
-	ST.clamp01 = (a) => ST.clamp(a, 0, 1)
-
-	ST.mod = (x, n) => (x % n + n) % n
-
-	// ST.angle = ([x, y] => Math.atan2(this.y, this.x))
-
 	// Basic texture functions
 	// TODO: Make these work on more texture types
-
-	// ST.copy = (tex, role_model) => {
-	// 		return tex.io({inpt: role_model},`this=inpt`)
-	// 	}
 
 
 	ST.rescale = (tex, role_model) => {
 		return tex.frag({
-			role_model : den.f4tex | den.input,
+			role_model: den.f4tex | den.input | den.xyzClamp,
 			outColor: den.f4tex | den.output,
 			render : `
 				outColor = texture(role_model, pixel/res);
@@ -45,8 +36,6 @@ exports.init = (den, extend = true) => {
 	}
 
 	ST.copy = (tex, model) => {
-		// return tex.setTo(model)
-		// let { pattern, swizzle } = tex.type;
 		return tex.frag({
 			model: den.f4tex | den.input | den.xyzClamp,
 			outColor: den.f4tex | den.output,
@@ -56,16 +45,18 @@ exports.init = (den, extend = true) => {
 		)
 	}
 
-	// ST.add = (tex, role_model) => {
-	// 	return tex.io({ inpt: role_model }, `this.x=this.x+inpt`)
-	// }
-	ST.add = (tex, role_model) => {
-		return tex.io({ inpt: role_model }, `this=this+inpt`)
+	ST.add = (tex, inpt) => {
+		return tex.io({ inpt }, `this=this+inpt`)
 	}
 
-		// Returns a smaller texture.
+	ST.drawOn = (tex, inpt) => {
+		return tex.io({inpt}, `
+			// this.a = 1.;
+			this.rgb = this.rgb * (1.-inpt.a) + inpt.rgb*inpt.a
+		`)
+	}
 
-
+	// Remove the borders and return a smaller texture.
 	ST.debord = (cut, tex, offset) => {
 		return cut.frag(
 			{
@@ -85,7 +76,6 @@ exports.init = (den, extend = true) => {
 				cut: den.f4tex | den.input | den.nxNearest,
 				offset: den.int2,
 				render: `
-					// outColor = texelFetch(image, texel, 0);
 					outColor = texelFetch(cut, texel-offset, 0);
 					`
 			},
@@ -116,6 +106,8 @@ exports.init = (den, extend = true) => {
 		return ST.kernels[size];
 	}
 
+
+	// int version
 	ST.blurKernel1D = (tex, kernel, dir, stretch = 1) => {
 		let radius = kernel.size[0];
 		tex.frag(
@@ -127,24 +119,48 @@ exports.init = (den, extend = true) => {
 				dir: den.int,
 				render: `
 						${tex.ctor} img = texelFetch(image,texel,0)${tex.swizzle};
-						// float img = texelFetch(image,texel,0).x;
 						float total = 1.;
 						for (int i = 1; i <= radius; i+= stretch){
-								// vec4 kern = getTexel(kernel, ivec2(i, 0.));
-								// float kern = 1.;
 								float kern = texelFetch(kernel, ivec2(i, 0), 0).x;
-								// float a = kern.x;
 								if (dir == 0){
 									img += texelFetch(image, texel + ivec2(i, 0), 0)${tex.swizzle}*kern;
 									img += texelFetch(image, texel + ivec2(-i, 0), 0)${tex.swizzle}*kern;
-									// img += pixelOffset(image,  i, 0)*a;
-									// img += pixelOffset(image, -i, 0)*1.0*a;
 								}
 								else {
 									img += texelFetch(image, texel + ivec2(0, i), 0)${tex.swizzle}*kern;
 									img += texelFetch(image, texel + ivec2(0, -i), 0)${tex.swizzle}*kern;
-									// img += pixelOffset(image, 0,  i)*a;
-									// img += pixelOffset(image, 0, -i)*1.0 * a;
+								}
+								total += kern*2.;
+						}
+						outColor${tex.swizzle} = img/total;`
+			},
+			{ radius, kernel, dir, stretch }
+		);
+	}
+
+	// float version. TODO: make xyzclamp work
+	ST.floatBlurKernel = (tex, kernel, dir, stretch = 1) => {
+		let radius = kernel.size[0];
+		tex.frag(
+			{
+				kernel: den.f1tex | den.input,
+				outColor: den.f4tex | den.output | den.xyzMirror,
+				radius: den.float,
+				stretch: den.float,
+				dir: den.int,
+				render: `
+						${tex.ctor} img = texelFetch(image,texel,0)${tex.swizzle};
+						// float img = texelFetch(image,texel,0).x;
+						float total = 1.;
+						for (float i = 1.; i <= radius; i+= stretch){
+								float kern = texelFetch(kernel, ivec2(i, 0), 0).x;
+								if (dir == 0){
+									img += texture(image, (pixel+vec2(i, 0))/res)${tex.swizzle}*kern;
+									img += texture(image, (pixel+vec2(-i, 0))/res)${tex.swizzle}*kern;
+								}
+								else {
+									img += texture(image, (pixel+vec2(0, i))/res)${tex.swizzle}*kern;
+									img += texture(image, (pixel+vec2(0, -i))/res)${tex.swizzle}*kern;
 								}
 								total += kern*2.;
 						}
@@ -158,9 +174,12 @@ exports.init = (den, extend = true) => {
 	ST.blurKernel = (tex, kernel, stretch = 1) => {
 		ST.blurKernel1D(tex, kernel, 1, stretch);
 		ST.blurKernel1D(tex, kernel, 0, stretch);
+		// ST.floatBlurKernel(tex, kernel, 1, stretch);
+		// ST.floatBlurKernel(tex, kernel, 1, stretch);
 	}
 
 	// A variation on the downsample blur form ben.js, but uses a kernel to precompute the function.
+	// downsampling alone also has a blurring effect
 	//TODO: get derivative in here
 
 	ST.fastBlur = (tex, radius, curve, quality = 1) => { //
@@ -168,14 +187,18 @@ exports.init = (den, extend = true) => {
 		if (quality <= 0 || quality > 1) {
 			throw new StaplesError("Can't blur with quality: " + quality);
 		}
+		if (!Number.isInteger(tex.size[0]) || !Number.isInteger(tex.size[1])){
+			throw new StaplesError("Non integer texture size: "+ tex.size)
+		}
 		let kernel = ST.kernel(radius, curve);
 		// Downsample if less than full quality
 		if (quality < 1) {
 			// TODO: temp texture, this is bad
-			let ds = den.f4tex([tex.size[0]*quality, tex.size[1]*quality])
-			ST.rescale(ds, tex) // downsample
-			ST.blurKernel(ds, kernel, 1);
-			ST.rescale(tex, ds) // upsample. nearest neighbor keeps it smooth.
+			// let ds = den.f4tex([Math.ceil(tex.size[0]*quality), Math.ceil(tex.size[1]*quality)])
+			tempTex.setData([Math.ceil(tex.size[0] * quality), Math.ceil(tex.size[1] * quality)])
+			ST.rescale(tempTex, tex) // downsample
+			ST.blurKernel(tempTex, kernel, 1);
+			ST.rescale(tex, tempTex) // upsample. nearest neighbor keeps it smooth.
 		} else {
 			ST.blurKernel(tex, kernel, 1);
 		}
@@ -227,9 +250,9 @@ exports.init = (den, extend = true) => {
 	}
 
 
-	ST.getDen = () => {
-		return den
-	}
+	// ST.getDen = () => {
+	// 	return den
+	// }
 
 	// Adds shortcuts to functions from within textures.
 
@@ -244,6 +267,17 @@ exports.init = (den, extend = true) => {
 		}
 		texture.SetTo = function(tex) { return ST.copy(this, tex)}
 		texture.Plus = function(tex) { return ST.add(this, tex) }
+		texture.SrcOver = function(tex) {return ST.drawOn(this, tex)}
+
+		texture.BlurV = function (radius, curve = ST.sinusoid) {
+			let kernel = ST.kernel(radius, curve);
+			return ST.blurKernel1D(this, kernel, 1, 1);
+		}
+
+		texture.BlurH = function (radius, curve = ST.sinusoid) {
+			let kernel = ST.kernel(radius, curve);
+			return ST.blurKernel1D(this, kernel, 0, 1);
+		}
 	}
 
 	return ST

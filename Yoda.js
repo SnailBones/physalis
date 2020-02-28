@@ -10,13 +10,13 @@ exports.init = (den) =>
 
 	// Helpful Vector Functions
 	// Square of magnitude
-	let sqMag = p => p[0]*p[0]+p[1]*p[1]
+	// let sqMag = p => p[0]*p[0]+p[1]*p[1]
 
-	// Set magnitude
-	let setMag = (p, mag) => {
-		old = Math.sqrt(sqMag(p))
-		return [p[0]*mag/old, p[1]*mag/old]
-	}
+	// // Set magnitude
+	// let setMag = (p, mag) => {
+	// 	old = Math.sqrt(sqMag(p))
+	// 	return [p[0]*mag/old, p[1]*mag/old]
+	// }
 	// Puck / Ball / Planet / Follower // TODO: split this into another file: newton.js
 	class Orb {
 		constructor(rad, pos) {
@@ -33,7 +33,7 @@ exports.init = (den) =>
 	class Force {
 		static smallDepth = den.f1tex([1, 1]) // Used for downsampling, size adjusted dynamically.
 		static smallField = den.f2tex([1, 1])
-		constructor(full_size, range = 180, quality = 1, margins = [0, 0, 0, 0]) {
+		constructor(full_size, range, curve = ST.sinusoid, quality = 1, margins = [0, 0, 0, 0]) {
 			// this.size = size
 			this.margin_l = margins[0]
 			this.margin_r = margins[1]
@@ -56,6 +56,8 @@ exports.init = (den) =>
 
 			this.range = range // 180 is 3 feet with 5 ppi
 			this.quality = quality
+
+			this.curve = curve// TODO: set curve to gaussian for attraction
 
 
 			// TODO: move these to child library
@@ -127,20 +129,46 @@ exports.init = (den) =>
 					// i. e. : texture(tex,(coord)/res), not texelFetch
 					outColor.x = texture(image, (pixel + vec2(1, 0))/res).x - texture(image, (pixel + vec2(-1, 0))/res).x;
 					outColor.y = texture(image, (pixel + vec2(0, 1))/res).x - texture(image, (pixel + vec2(0, -1))/res).x;
+					// outColor = fwidth(pixel.xy);
+					// float dx = dFdx(pixel.x);
+					// float dy = dFdy(pixel.y);
+					// outColor = vec2(dx, dy);
 					outColor *= mult;
 				`
 			}, { mult: multiplier / 2 })
+		}
 
+		// doesn't work great. bottleneck is blur anyway.
+		static fastDxy(tex, multiplier) {
+			// return
+			return tex.frag({
+				image: den.f2tex | den.input | den.xyzClamp, // this line means no loops
+				mult: den.float,
+				outColor: den.f2tex | den.output,
+				frag: `
+					// # define GL_OES_standard_derivatives 1
+					void render(){
+						// Need to use pixel sampling instead of texels for xyzclamp to work
+						// i. e. : texture(tex,(coord)/res), not texelFetch
+						float val = texture(image, pixel/res).x;
+						// outColor = fwidth(pixel.xy);
+						float dx = dFdx(val);
+						float dy = dFdy(val);
+						outColor = vec2(dx, dy);
+						// outColor.x = val;
+						outColor *= mult;
+					}
+				`
+			}, { mult: multiplier * 4 })
 		}
 
 		// blur and dxdy while downsampled
-		static blurAndForce(depth, field, r, quality, multiplier) {
+		static blurAndForce(depth, field, r, quality, multiplier, curve) {
 			let radius = Math.floor(r * quality);
 			if (radius <= 0){
 				console.error("Cannot blur with radius ", r, "& quality", quality)
 			}
-			// let curve = ST.sinusoid
-			let curve = ST.gaussian
+			// let curve = ST.gaussian
 			let kernel = ST.kernel(radius, curve); // TODO: push into ST?
 			if (quality < 1) {
 				let small = [depth.size[0] * quality, depth.size[1] * quality]
@@ -150,6 +178,7 @@ exports.init = (den) =>
 				ST.blurKernel(Force.smallDepth, kernel, 1)
 				ST.copy(Force.smallField, Force.smallDepth)
 				Force.dxy(Force.smallField, multiplier * quality)
+				// Force.fastDxy(Force.smallField, multiplier * quality)
 
 				// Scale back up, linear interpolation smooths both.
 				ST.copy (depth, Force.smallDepth)
@@ -163,25 +192,30 @@ exports.init = (den) =>
 		}
 
 		update(depth, range = this.range, quality = this.quality) {
-
+			// let curve = ST.gaussian
 			// range = 400
 			ST.debord(this.depth, depth, [this.margin_l, this.margin_t])
 
 			// ST.debord(this.depth, depth, [0, 0])
 			// this.depth = depth
-			let blur = Math.abs(range)
-			let repel = Math.sign(range)
+			// let blur = Math.abs(range)
+			let blur = this.range
+			// let repel = Math.sign(range)
 			// let quality = 1/2
 			// ST.blur(this.depth, blur, 1 / 16)
-			Force.blurAndForce(this.depth, this.field, blur, quality, -10 * range)
+			Force.blurAndForce(this.depth, this.field, blur, quality, -6 * range, this.curve)
+			// Force.blurAndForce(this.depth, this.field, blur, quality, -10 * range)
 			// bigger range gets a bigger multiplier to balance out the blur-induced fading.
 		}
 		showDepth() {
 			return ST.undebord(this.viz, this.depth, [this.margin_l, this.margin_t])
 		}
-		showGravity() {
+		getField(){
+			return ST.undebord(this.viz, this.field, [this.margin_l, this.margin_t])
+		}
+		prettyField(mult = .1) {
 			// TODO: xytohue
-			return ST.undebord(this.viz, this.field, [this.margin_l, this.margin_t])._xy2hue(.1)
+			return ST.undebord(this.viz, this.field, [this.margin_l, this.margin_t])._xy2hue(mult)
 		}
 	}
 	return Force

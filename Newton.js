@@ -36,12 +36,12 @@ class Stone extends Circle { // A static body. Effectively a puck with infinite 
 }
 // fig // Ball // Planet // Tracker // Fig
 class Fig extends Circle {
-	constructor(rad, pos) {
+	constructor(rad, pos, active) {
 		super(rad, pos)
 		this.velocity = [0, 0]
 		this.speed = 0
 		this.depth = 0
-		this.active = true
+		this.active = active
 		this.mass = 1
 	}
 }
@@ -66,8 +66,8 @@ class Newton {
 		this.force = 5000 // force from depth
 		this.fric_touch = .95
 		this.fric_free = .95
-		this.gravity = 5000 // force downward
-		// this.gravity = 0
+		// this.gravity = 5000 // force downward
+		this.gravity = 0
 		this.bounce_strength = .96 // between 0 and 1
 		// this.fric_touch = 1
 		// this.fric_free = 1
@@ -90,8 +90,9 @@ class Newton {
 	updateSpeeds(data, time) { // Ingests ugly GLSL array
 		for (let i = 0; i < this.figs.length; i++) {
 			let fig = this.figs[i]
+			fig.depth = data[i * 4 + 2]
+			if (!fig.active) { continue }
 			let force = [...data.slice(i * 4, i * 4 + 2)]
-			fig.depth = data[i*4+2]
 
 			if (force[0] != 0 || force[1] != 0)
 			{
@@ -105,7 +106,8 @@ class Newton {
 					this.onHitDepth(fig, change)
 				}
 				fig.velocity = new_velocity
-				fig.speed = mag(new_speed)
+				// fig.speed = mag(new_speed)
+				fig.speed = new_speed
 			}
 		}
 
@@ -269,43 +271,10 @@ class Newton {
 		}
 	}
 
-	// move(time) {
-	// 	for (let i = 0; i < this.figs.length; i++) {
-	// 		let fig = this.figs[i]
-	// 		this.applyFriction(fig)
-	// 		// console.log("moving with velocity", fig.velocity)
-	// 		let last_pos = fig.position.slice() // copy array
-	// 		fig.position[0] += fig.velocity[0] * time
-	// 		fig.position[1] += fig.velocity[1] * time
-
-	// 		// collision between figs
-	// 		for (let j = i + 1; j < this.figs.length; j++) {
-	// 			let pome = this.figs[j]
-	// 			let dif = [fig.position[0] - pome.position[0], fig.position[1] - pome.position[1]]
-	// 			let sqDist = sqMag(dif)
-	// 			let colDist = fig.radius + pome.radius;
-	// 			if (sqDist <= colDist * colDist) {
-	// 				let dist = Math.sqrt(sqDist);
-	// 				let repel = setMag(dif, (colDist - dist) * this.fig_repel * time)
-	// 				fig.position[0] += repel[0]
-	// 				fig.position[1] += repel[1]
-	// 				pome.position[0] -= repel[0]
-	// 				pome.position[1] -= repel[1]
-	// 			}
-	// 		}
-	// 		// stop moving at edge
-	// 		fig.position[0] = clamp(fig.position[0], this.margin_l + fig.radius, this.edge_r - fig.radius)
-	// 		fig.position[1] = clamp(fig.position[1], this.margin_t + fig.radius, this.edge_b - fig.radius)
-	// 		// console.log("start velocity is", fig.velocity)
-	// 		fig.velocity[0] = (fig.position[0] - last_pos[0])/time
-	// 		fig.velocity[1] = (fig.position[1] - last_pos[1])/time
-	// 	}
-	// }
-
-
 	move(time) {
 		for (let i = 0; i < this.figs.length; i++) {
 			let fig = this.figs[i]
+			if (!fig.active) {continue}
 
 			if (!fig.depth && fig.position[1] + fig.radius < this.edge_b) // make figs easier to lift by having no gravity when touching
 				fig.velocity[1] += this.gravity * time
@@ -315,14 +284,11 @@ class Newton {
 			fig.position[1] += fig.velocity[1] * time
 			this.bounce(time)
 			this.applyFriction(fig, time)
-
-
-			// apply gravity
 		}
 	}
 
-	add(size, position) {
-		let fig = new Fig(size, position)
+	add(size, position, active = true) {
+		let fig = new Fig(size, position, active)
 		this.figs.push(fig)
 		return fig
 	}

@@ -208,11 +208,28 @@ exports.init = (den) =>
 
 	}
 
-	// Managers Sensors
+	// Manages Sensors
 	// TODO: do all the sensors in one fell glsl swoop
 	class Sensei {
 		constructor() {
 			this.sensors = []
+		}
+		addSensor(size, center) {
+			let sensor = new Sensor(size, center)
+			this.sensors.push(sensor)
+		}
+		update(depth){
+			for (let sensor of this.sensors){
+				sensor.update(depth)
+			}
+		}
+		getFilled(){
+			return this.sensors.map(sensor => sensor.filled)
+		}
+		draw(cfx){
+			for (let sensor of this.sensors){
+				sensor.draw(cfx)
+			}
 		}
 
 	}

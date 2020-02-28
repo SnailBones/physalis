@@ -133,6 +133,67 @@ class ThingInSpace {
 				}
 			}
 		}
+		drawBoxNoRecolor(cfx, box, opacity = 0) {
+			// box is a ThingInSpace
+			// box.position is a point describing the center of the bottom front corner.
+			// let depth = box.sizeInFeet()[2];
+			let depth = box.sizeInScreens()[2]
+			// console.log("box size is", box.scale)
+			// console.log("box.sizeInScreens is", box.sizeInScreens())
+			// let depth = box.sizeInScreens()[2];
+			// let depth = box.sizeInScreens()[2]
+			// console.log("size in feet is", box.sizeInFeet())
+			let position = box.positionInScreens() // TODO: correct units
+			// let back_position = [position[0], position[1], position[2] + depth]
+			let z = position[2] // Distance
+			// cfx.hsv(box.hue, 1 - z / 200, 1 - z / 150)
+			// console.log("box position is", box.position)
+			// console.log("normalized is", position)
+			// console.log("depth is", depth)
+			// depth = 100
+			let [fx, fy, fscale] = this.pointToScreen(...position)
+			// console.log([fx, fy, fscale])
+			// let [fx, fy, fscale] = this.pointToScreen(...box.position)
+			let front_dim = box.flatSize()
+			front_dim[0] *= fscale
+			front_dim[1] *= fscale
+			// let [back_x, back_y, bscale] = this.pointToScreen(box.position[0], box.position[1], box.position[2]+depth)
+			let [back_x, back_y, bscale] = this.pointToScreen(position[0], position[1], position[2] + depth)
+			let back_dim = box.flatSize()
+			back_dim[0] *= bscale
+			back_dim[1] *= bscale
+
+			// console.log("z is", z, "depth is", depth, "eye_distance is", this.eye_distance)
+			// fillRect(cfx, [fx, fy], front_dim)
+			// console.log([fx, fy], front_dim)
+			// draw back
+			if (z + depth > -this.eye_distance) {
+				drawRect(cfx, [back_x, back_y], back_dim)
+				cfx.line(back_x - back_dim[0] / 2, back_y, fx - front_dim[0] / 2, fy)
+				cfx.line(back_x + back_dim[0] / 2, back_y, fx + front_dim[0] / 2, fy)
+				cfx.line(back_x - back_dim[0] / 2, back_y - back_dim[1], fx - front_dim[0] / 2, fy - front_dim[1])
+				cfx.line(back_x + back_dim[0] / 2, back_y - back_dim[1], fx + front_dim[0] / 2, fy - front_dim[1])
+			}
+			// draw front
+			if (z > -this.eye_distance) {
+				drawRect(cfx, [fx, fy], front_dim)
+			}
+			if (opacity >= 0) {
+				cfx.setAlpha(opacity * cfx.alpha)
+				// if (z > -this.eye_distance) {
+				// 	fillRect(cfx, [fx, fy], front_dim)
+				// }
+				// if (z + depth > -this.eye_distance) {
+				// 	fillRect(cfx, [back_x, back_y], back_dim)
+				// }
+				if (z > 0) {
+					fillRect(cfx, [fx, fy], front_dim)
+				}
+				if (z + depth > 0) {
+					fillRect(cfx, [back_x, back_y], back_dim)
+				}
+			}
+		}
 		// scaleTex(tex, scale) {
 		// 	// console.log("scale is", scale)
 		// 	tex.run({

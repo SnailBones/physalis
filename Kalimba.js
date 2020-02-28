@@ -3,21 +3,22 @@
 // TODO: Clean up, include list of sounds.
 
 class SoundPlayer {
-	constructor(path = "visualization/dev_team/Aidan/Games/Media/Sound/") {
+	constructor(path = "visualization/dev_team/Aidan/Assets/Sound/") {
 		this.sounds = []
 		this.ctx = new AudioContext();
 		this.volume = 1 // snake sounds were way too loud // TODO: change this
 		this.path = path
 		this.tune = 0
 	}
+
 	loadFile(file) {
 		return fetch(this.path + file)
 			.then(response => response.arrayBuffer())
 			.then(arrayBuffer => this.ctx.decodeAudioData(arrayBuffer));
 	}
 
-	// a broken promise... probably not the best practice.
-	// loading sounds should ultimately be integrated into the engine.
+	// a broken promise... maybe not the best practice?
+	// but a holdover until loading sounds is part of the engine
 	startLoading(path) {
 		let id = this.sounds.length
 		this.sounds[id] = null // better no sound than the wrong sound
