@@ -44,6 +44,11 @@ class Fig extends Circle {
 		this.active = active
 		this.mass = 1
 	}
+	fossilize() {
+		this.active = false
+		this.speed = 0
+		this.velocity = [0, 0]
+	}
 }
 
 class Newton {
@@ -271,20 +276,27 @@ class Newton {
 		}
 	}
 
+	each(fig, time){
+
+	}
+
 	move(time) {
 		for (let i = 0; i < this.figs.length; i++) {
 			let fig = this.figs[i]
+			this.each(fig, time)
 			if (!fig.active) {continue}
 
 			if (!fig.depth && fig.position[1] + fig.radius < this.edge_b) // make figs easier to lift by having no gravity when touching
 				fig.velocity[1] += this.gravity * time
 
-			this.bounceOffWalls(fig, time)
+			this.applyFriction(fig, time)
+			
 			fig.position[0] += fig.velocity[0] * time
 			fig.position[1] += fig.velocity[1] * time
-			this.bounce(time)
-			this.applyFriction(fig, time)
+
+			this.bounceOffWalls(fig, time)
 		}
+		this.bounce(time)
 	}
 
 	add(size, position, active = true) {
