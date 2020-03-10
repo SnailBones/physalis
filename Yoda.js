@@ -1,6 +1,5 @@
-// Point based collider and depth-to-physics system.
-// Combine with physics objects for use with balls or tracking.
-// Physics objects that can be pushed or pulled by depth ( or one another).
+// Exert a force now your depth will.
+// Combine with Newton or Burdock for use with balls or tracking.
 
 const Staples = require("./Staples.js")
 
@@ -138,7 +137,7 @@ exports.init = (den) =>
 			}, { mult: multiplier / 2 })
 		}
 
-		// doesn't work great. bottleneck is blur anyway.
+		// an attempt using dFdx. doesn't work great. bottleneck is blur anyway.
 		static fastDxy(tex, multiplier) {
 			// return
 			return tex.frag({
@@ -207,7 +206,7 @@ exports.init = (den) =>
 			// Force.blurAndForce(this.depth, this.field, blur, quality, -10 * range)
 			// bigger range gets a bigger multiplier to balance out the blur-induced fading.
 		}
-		showDepth() {
+		getDepth() {
 			return ST.undebord(this.viz, this.depth, [this.margin_l, this.margin_t])
 		}
 		getField(){

@@ -2,6 +2,8 @@
 
 // Objects stick to and follow moving depth.
 
+// IMPORTANT: Works much better with sinusoid than gaussian.
+
 const { V } = require("./Vector.js");
 
 // TODO: remove these, use vector
@@ -92,6 +94,7 @@ class Burdock {
 			let force = [...data.slice(i * 4, i * 4 + 2)]
 
 			if (force[0] != 0 || force[1] != 0)
+			// if (true)
 			{
 				// let new_velocity = [fig.velocity[0] + force[0] * this.force * time, fig.velocity[1] + force[1] * this.force * time]
 				let new_velocity = [force[0] * this.force, force[1] * this.force]
@@ -116,10 +119,17 @@ class Burdock {
 
 
 	move(time) {
-		time = Math.min(time, 1/50) // prevents too much jitter
+		// time = Math.min(time, 1/50) // prevents too much jitter
+		time = 1/20
 		for (let i = 0; i < this.figs.length; i++) {
 			let fig = this.figs[i]
-			if (!fig.active) {continue}
+			if (!fig.active) {continue} // an active one can still push inactive burs
+			
+			if (fig.velocity[0] != 0) {
+				console.log("velocity is", fig.velocity)
+				// console.log("moving distance", fig.velocity[0] * time, fig.velocity[1] * time)
+			}
+
 			fig.position[0] += fig.velocity[0] * time
 			fig.position[1] += fig.velocity[1] * time
 			// collision between burs
@@ -182,7 +192,7 @@ class Burdock {
 
 	eatStone(plum) {
 		for (let i = 0; i < this.stones.length; i++) {
-			if (this.samePuck(plum, this.stones[i])) {
+			if (this.same(plum, this.stones[i])) {
 				return this.stones.splice(i, 1)
 			}
 		}
