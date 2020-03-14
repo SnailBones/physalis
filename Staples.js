@@ -249,6 +249,15 @@ exports.init = (den, extend = true) => {
 		return tex.io( `this.rg=vec2((this.r+this.g)/2.)`)
 	}
 
+	// GAMMA CORRECTION
+	// curves colors on light values instead of perception differences
+	// useful for realistic lighting or adding nuance to the darxness.
+	// impoves fadey trails.
+	// should be the last thing you do to a texture.
+	// from inigo quilez
+	ST.gamma = (outColor) =>{
+		outColor.io(`this.xyz = pow(this.xyz, vec3(1. / 2.2))`)
+	}
 
 	// ST.getDen = () => {
 	// 	return den
@@ -257,6 +266,9 @@ exports.init = (den, extend = true) => {
 	// Adds shortcuts to functions from within textures.
 
 	if (extend) {
+
+		// no => functions here :(
+
 		let texture = den.Texture.prototype
 		texture.Blur = function (radius, quality = 1) {
 			return ST.fastBlur(this, radius, ST.sinusoid, quality);
@@ -278,6 +290,8 @@ exports.init = (den, extend = true) => {
 			let kernel = ST.kernel(radius, curve);
 			return ST.blurKernel1D(this, kernel, 0, 1);
 		}
+
+		texture.FixGamma = function() { ST.gamma(this) }
 	}
 
 	return ST

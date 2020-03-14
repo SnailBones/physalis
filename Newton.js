@@ -284,6 +284,8 @@ class Newton {
 		for (let i = 0; i < this.figs.length; i++) {
 			let fig = this.figs[i]
 			this.each(fig, time)
+
+			this.bounceOffWalls(fig, time) // keep inactive figs in game even if they get pushed
 			if (!fig.active) {continue}
 
 			if (!fig.depth && fig.position[1] + fig.radius < this.edge_b) // make figs easier to lift by having no gravity when touching
@@ -293,8 +295,6 @@ class Newton {
 			
 			fig.position[0] += fig.velocity[0] * time
 			fig.position[1] += fig.velocity[1] * time
-
-			this.bounceOffWalls(fig, time)
 		}
 		this.bounce(time)
 	}
