@@ -76,7 +76,9 @@ class Newton {
 		this.bounce_strength = .96 // between 0 and 1
 		// this.fric_touch = 1
 		// this.fric_free = 1
-		this.fig_repel = 2 // repel one another
+		// this.fig_repel = 2 // repel one another
+		this.fig_repel = 1
+		// this.fig_repel = 0
 	}
 
 	// Override these functions to add sounds, win events, etc.
@@ -243,6 +245,8 @@ class Newton {
 			// collision between figs
 			for (let j = i + 1; j < this.figs.length; j++) {
 				let pome = this.figs[j]
+				// this line makes inactive figs rigid. removing it means they continue to bounce, just no gravity.
+				// if (!fig.active && !pome.active) {continue}
 				let dif = [fig.position[0] - pome.position[0], fig.position[1] - pome.position[1]]
 				let sqDist = sqMag(dif)
 				let colDist = fig.radius + pome.radius;
