@@ -226,6 +226,14 @@ class Newton {
 		let normal = setMag([stone.position[0] - fig.position[0], stone.position[1] - fig.position[1]], 1)
 		let tangent = [-normal[1], normal[0]]
 
+		// if angle between (stone.position - fig.position) and fig.velocity is greater than 90
+		// do nothing, that means we're moving away from the stone.
+		// this prevents them from getting stuck
+		let dot_prod = dot(normal, fig.velocity)
+		if (dot_prod < 0) { // obtuse angle
+			return
+		}
+
 		let speed_normal = dot(fig.velocity, normal)
 		let speed_tangent = dot(fig.velocity, tangent)
 		// let speed_normal = puck.velocity.dot(normal)
