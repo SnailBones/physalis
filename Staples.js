@@ -1,4 +1,4 @@
-// Shaders, Textures, Ar(ray)ithmetic Plus Little Easy Scripts.
+// Shaders, Textures, Ar(ray)ithmetic Plus Little Essential Scripts.
 // A small collection of my favorite shader functions,
 // corn, rice, potatoes, and blur functions.
 
