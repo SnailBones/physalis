@@ -1,4 +1,4 @@
-// Now push and pull things, your depth will.
+// Now push and pull things, your depth can.
 // Combine with Newton or Burdock for use with balls or tracking, respectively.
 
 const Staples = require("./Staples.js")
